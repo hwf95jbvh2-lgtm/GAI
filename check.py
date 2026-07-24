@@ -98,7 +98,7 @@ def get_page():
                 flush=True
             )
 
-            time.sleep(20)
+            time.sleep(5)
 
     raise last_error
 
