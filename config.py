@@ -6,4 +6,4 @@ PAGE_URL = "https://xn--80aebkobnwfcnsfk1e0h.xn--p1ai/svc/273"
 
 STATE_FILE = "/data/files.json"
 
-CHECK_INTERVAL = 10
+CHECK_INTERVAL = 3600
