@@ -14,15 +14,17 @@ from config import (
     BOT_TOKEN,
     CHAT_ID,
     PAGE_URL,
-    REQUEST_TIMEOUT,
-    HEADERS,
     STATE_FILE
 )
 
 BASE_URL = "https://xn--80aebkobnwfcnsfk1e0h.xn--p1ai"
 
+TIMEOUT = 90
+
 def send_message(text):
+
     try:
+
         requests.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
             json={
@@ -31,24 +33,39 @@ def send_message(text):
             },
             timeout=30
         )
+
     except Exception as e:
-        print("Ошибка Telegram:", e, flush=True)
+
+        print(
+            "Ошибка Telegram:",
+            e,
+            flush=True
+        )
 
 def load_state():
 
     if not os.path.exists(STATE_FILE):
+
         return {}
 
     try:
+
         with open(
             STATE_FILE,
             "r",
             encoding="utf-8"
         ) as file:
+
             return json.load(file)
 
     except Exception as e:
-        print("Ошибка чтения files.json:", e, flush=True)
+
+        print(
+            "Ошибка чтения files.json:",
+            e,
+            flush=True
+        )
+
         return {}
 
 def save_state(data):
@@ -58,6 +75,7 @@ def save_state(data):
         "w",
         encoding="utf-8"
     ) as file:
+
         json.dump(
             data,
             file,
@@ -71,20 +89,24 @@ def get_hash(content):
 
 def get_page():
 
-    print("Открываю страницу сайта...", flush=True)
+    print(
+        "Открываю страницу...",
+        flush=True
+    )
 
     response = requests.get(
         PAGE_URL,
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT
+        headers={
+            "User-Agent":
+            "Mozilla/5.0"
+        },
+        timeout=TIMEOUT
     )
 
     response.raise_for_status()
 
-    print("Страница получена", flush=True)
-
     print(
-        response.text[:500],
+        "Страница получена",
         flush=True
     )
 
@@ -102,7 +124,7 @@ def get_files_from_page():
     files = {}
 
     print(
-        "Ищу блок Файлы для скачивания...",
+        "Ищу PDF...",
         flush=True
     )
 
@@ -111,14 +133,19 @@ def get_files_from_page():
         href = link.get("href")
 
         if not href:
+
             continue
 
         if ".pdf" not in href.lower():
+
             continue
 
         if href.startswith("/"):
+
             url = BASE_URL + href
+
         else:
+
             url = href
 
         name = href.split("/")[-1]
@@ -126,12 +153,15 @@ def get_files_from_page():
         description = link.text.strip()
 
         files[name] = {
+
             "url": url,
+
             "description": description
+
         }
 
     print(
-        "НАЙДЕННЫЕ ФАЙЛЫ:",
+        "Найдены файлы:",
         files,
         flush=True
     )
@@ -141,20 +171,69 @@ def get_files_from_page():
 def download_file(url):
 
     print(
-        "Скачиваю:",
+        "Скачивание:",
         url,
         flush=True
     )
 
-    response = requests.get(
-        url,
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT
+    for attempt in range(1, 4):
+
+        try:
+
+            response = requests.get(
+
+                url,
+
+                headers={
+
+                    "User-Agent":
+                    "Mozilla/5.0 "
+                    "(Windows NT 10.0; Win64; x64) "
+                    "Chrome/120 Safari/537.36"
+
+                },
+
+                timeout=TIMEOUT
+
+            )
+
+            response.raise_for_status()
+
+            print(
+
+                "Скачан размер:",
+
+                len(response.content),
+
+                "байт",
+
+                flush=True
+
+            )
+
+            return response.content
+
+        except Exception as e:
+
+            print(
+
+                f"Ошибка скачивания {attempt}/3:",
+
+                e,
+
+                flush=True
+
+            )
+
+            time.sleep(10)
+
+    raise Exception(
+
+        "Не удалось скачать файл: "
+
+        + url
+
     )
-
-    response.raise_for_status()
-
-    return response.content
 
 def check_files():
 
@@ -169,23 +248,40 @@ def check_files():
     for name, info in files.items():
 
         content = download_file(
+
             info["url"]
+
         )
 
         file_hash = get_hash(
+
             content
+
         )
 
         current_state[name] = {
-            "url": info["url"],
-            "description": info["description"],
-            "hash": file_hash
+
+            "url":
+
+            info["url"],
+
+            "description":
+
+            info["description"],
+
+            "hash":
+
+            file_hash
+
         }
 
         if name not in old_state:
 
             changes.append(
-                f"🆕 Новый файл:\n{name}"
+
+                f"🆕 Новый файл:\n{name
+                                  "
+
             )
 
         else:
@@ -193,14 +289,18 @@ def check_files():
             if old_state[name].get("hash") != file_hash:
 
                 changes.append(
+
                     f"📄 Изменен файл:\n{name}"
+
                 )
 
             if old_state[name].get("description") != info["description"]:
 
                 changes.append(
+
                     f"📝 Изменено описание:\n{name}\n\n"
                     f"Новое:\n{info['description']}"
+
                 )
 
     for old_name in old_state:
@@ -208,16 +308,23 @@ def check_files():
         if old_name not in current_state:
 
             changes.append(
+
                 f"❌ Файл удален:\n{old_name}"
+
             )
 
     save_state(
+
         current_state
+
     )
 
     print(
-        "files.json обновлен",
+
+        "files.json сохранен",
+
         flush=True
+
     )
 
     return changes
@@ -225,22 +332,33 @@ def check_files():
 def monitor():
 
     print(
+
         "Проверка файлов...",
+
         flush=True
+
     )
 
     changes = check_files()
 
     if changes:
+
         send_message(
+
             "⚠️ Изменения на сайте:\n\n"
+
             +
+
             "\n\n".join(changes)
+
         )
 
     else:
 
         print(
+
             "Изменений нет",
+
             flush=True
-        )
+
+        )}
