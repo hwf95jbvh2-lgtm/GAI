@@ -36,6 +36,7 @@ def send_message(text):
 def load_state():
 
     if not os.path.exists(STATE_FILE):
+
         return []
 
     try:
@@ -82,6 +83,12 @@ def save_state(files):
                 indent=4
             )
 
+        print(
+            "СОХРАНИЛИ FILES:",
+            files,
+            flush=True
+        )
+
     except Exception as e:
 
         print(
@@ -100,8 +107,7 @@ def get_files_from_page():
     response = requests.get(
         PAGE_URL,
         headers={
-            "User-Agent":
-            "Mozilla/5.0"
+            "User-Agent": "Mozilla/5.0"
         },
         timeout=60
     )
@@ -143,15 +149,9 @@ def check_files():
 
     new_files = get_files_from_page()
 
-    changed = (
-        set(old_files)
-        !=
-        set(new_files)
-    )
+    changed = set(old_files) != set(new_files)
 
-    save_state(
-        new_files
-    )
+    save_state(new_files)
 
     return changed
 
@@ -174,6 +174,12 @@ def monitor():
         )
 
     else:
+
+        send_message(
+            "🟢 Всё спокойно.\n\n"
+            "Список файлов без изменений.\n"
+            "Я продолжаю наблюдение."
+        )
 
         print(
             "Изменений нет",
