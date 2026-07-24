@@ -16,7 +16,7 @@ def main():
         "Если PDF зашевелятся, я сообщу."
     )
 
-    last_heartbeat = time.time()
+    last_heartbeat = 0
 
     while True:
 
@@ -24,16 +24,15 @@ def main():
 
             monitor()
 
-            current_time = time.time()
+            if time.time() - last.heartbeat >= HEARTBEAT_INTERVAL:
 
-            if current_time - last_heartbeat >= HEARTBEAT_INTERVAL:
-
+            
                 send_message(
                     "💚 Всё спокойно.\n\n"
                     "Я на посту и продолжаю следить за файлами."
                 )
 
-                last_heartbeat = current_time
+                last_heartbeat = time_time ()
 
 
         except Exception:
