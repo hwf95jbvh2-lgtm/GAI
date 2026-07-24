@@ -5,7 +5,7 @@ from config import CHECK_INTERVAL
 from check import monitor, send_message
 
 
-HEARTBEAT_INTERVAL = 3600
+HEARTBEAT_INTERVAL = 60
 
 
 def main():
