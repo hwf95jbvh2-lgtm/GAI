@@ -3,6 +3,7 @@ import json
 import requests
 
 from bs4 import BeautifulSoup
+from urllib.parse import unquote
 
 from config import (
     BOT_TOKEN,
@@ -10,10 +11,6 @@ from config import (
     PAGE_URL,
     STATE_FILE
 )
-
-
-BASE_URL = "https://xn--80aebkobnwfcnsfk1e0h.xn--p1ai"
-
 
 def send_message(text):
 
@@ -33,7 +30,6 @@ def send_message(text):
             e,
             flush=True
         )
-
 
 def load_state():
 
@@ -64,24 +60,38 @@ def load_state():
 
         return []
 
-
 def save_state(files):
 
-    with open(
-        STATE_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
+    try:
 
-        json.dump(
-            {
-                "files": files
-            },
-            file,
-            ensure_ascii=False,
-            indent=4
+        with open(
+            STATE_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+            json.dump(
+                {
+                    "files": files
+                },
+                file,
+                ensure_ascii=False,
+                indent=4
+            )
+
+        print(
+            "СОХРАНИЛИ FILES:",
+            files,
+            flush=True
         )
 
+    except Exception as e:
+
+        print(
+            "Ошибка сохранения files.json:",
+            e,
+            flush=True
+        )
 
 def get_files_from_page():
 
@@ -93,7 +103,8 @@ def get_files_from_page():
     response = requests.get(
         PAGE_URL,
         headers={
-            "User-Agent": "Mozilla/5.0"
+            "User-Agent":
+            "Mozilla/5.0"
         },
         timeout=60
     )
@@ -107,7 +118,6 @@ def get_files_from_page():
 
     files = []
 
-
     for link in soup.find_all("a"):
 
         href = link.get("href")
@@ -116,11 +126,11 @@ def get_files_from_page():
 
             name = href.split("/")[-1]
 
+            name = unquote(name)
+
             files.append(name)
 
-
     files = sorted(files)
-
 
     print(
         "Найдены файлы:",
@@ -128,9 +138,7 @@ def get_files_from_page():
         flush=True
     )
 
-
     return files
-
 
 def check_files():
 
@@ -138,36 +146,17 @@ def check_files():
 
     new_files = get_files_from_page()
 
+    changes = False
 
-    changes = []
+    if set(old_files) != set(new_files):
 
-
-    for file in new_files:
-
-        if file not in old_files:
-
-            changes.append(
-                f"🆕 Новый файл:\n{file}"
-            )
-
-
-    for file in old_files:
-
-        if file not in new_files:
-
-            changes.append(
-                f"❌ Удален файл:\n{file}"
-            )
-
+        changes = True
 
     save_state(
         new_files
     )
 
-
     return changes
-
-
 
 def monitor():
 
@@ -176,16 +165,14 @@ def monitor():
         flush=True
     )
 
+    changed = check_files()
 
-    changes = check_files()
-
-
-    if changes:
+    if changed:
 
         send_message(
-            "⚠️ Изменения на сайте:\n\n"
-            +
-            "\n\n".join(changes)
+            "⚠️ На сайте ГИБДД изменился список файлов.\n\n"
+            "Проверить обновления:\n"
+            f"{PAGE_URL}"
         )
 
     else:
@@ -194,4 +181,3 @@ def monitor():
             "Изменений нет",
             flush=True
         )
-        
