@@ -7,7 +7,6 @@ import json
 import time
 import hashlib
 import requests
-from datetime import datetime
 
 from bs4 import BeautifulSoup
 
@@ -32,9 +31,8 @@ def send_message(text):
             },
             timeout=30
         )
-
     except Exception as e:
-        print("Telegram error:", e, flush=True)
+        print("Ошибка Telegram:", e, flush=True)
 
 def load_state():
 
@@ -49,7 +47,8 @@ def load_state():
         ) as file:
             return json.load(file)
 
-    except Exception:
+    except Exception as e:
+        print("Ошибка чтения files.json:", e, flush=True)
         return {}
 
 def save_state(data):
@@ -72,35 +71,24 @@ def get_hash(content):
 
 def get_page():
 
-    last_error = None
+    print("Открываю страницу сайта...", flush=True)
 
-    for attempt in range(3):
+    response = requests.get(
+        PAGE_URL,
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT
+    )
 
-        try:
+    response.raise_for_status()
 
-            response = requests.get(
-                PAGE_URL,
-                headers=HEADERS,
-                timeout=REQUEST_TIMEOUT
-            )
+    print("Страница получена", flush=True)
 
-            response.raise_for_status()
+    print(
+        response.text[:500],
+        flush=True
+    )
 
-            return response.text
-
-        except Exception as e:
-
-            last_error = e
-
-            print(
-                f"Попытка {attempt + 1}/3 не удалась",
-                e,
-                flush=True
-            )
-
-            time.sleep(5)
-
-    raise last_error
+    return response.text
 
 def get_files_from_page():
 
@@ -113,22 +101,12 @@ def get_files_from_page():
 
     files = {}
 
-    title = soup.find(
-        string=lambda x:
-        x and "Файлы для скачивания" in x
+    print(
+        "Ищу блок Файлы для скачивания...",
+        flush=True
     )
 
-    if not title:
-        return files
-
-    block = title.find_parent(
-        class_="b-service-bank"
-    )
-
-    if not block:
-        return files
-
-    for link in block.find_all("a"):
+    for link in soup.find_all("a"):
 
         href = link.get("href")
 
@@ -139,11 +117,8 @@ def get_files_from_page():
             continue
 
         if href.startswith("/"):
-
             url = BASE_URL + href
-
         else:
-
             url = href
 
         name = href.split("/")[-1]
@@ -155,9 +130,21 @@ def get_files_from_page():
             "description": description
         }
 
+    print(
+        "НАЙДЕННЫЕ ФАЙЛЫ:",
+        files,
+        flush=True
+    )
+
     return files
 
 def download_file(url):
+
+    print(
+        "Скачиваю:",
+        url,
+        flush=True
+    )
 
     response = requests.get(
         url,
@@ -203,7 +190,7 @@ def check_files():
 
         else:
 
-            if old_state[name]["hash"] != file_hash:
+            if old_state[name].get("hash") != file_hash:
 
                 changes.append(
                     f"📄 Изменен файл:\n{name}"
@@ -228,10 +215,16 @@ def check_files():
         current_state
     )
 
+    print(
+        "files.json обновлен",
+        flush=True
+    )
+
     return changes
 
-def monitor()
-:print(
+def monitor():
+
+    print(
         "Проверка файлов...",
         flush=True
     )
@@ -239,7 +232,6 @@ def monitor()
     changes = check_files()
 
     if changes:
-
         send_message(
             "⚠️ Изменения на сайте:\n\n"
             +
