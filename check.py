@@ -179,5 +179,3 @@ def monitor():
             "Изменений нет",
             flush=True
         )
-            flush=True
-        )
