@@ -15,6 +15,7 @@ from config import (
 def send_message(text):
 
     try:
+
         requests.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
             json={
@@ -25,6 +26,7 @@ def send_message(text):
         )
 
     except Exception as e:
+
         print(
             "Ошибка Telegram:",
             e,
@@ -37,6 +39,7 @@ def load_state():
         return []
 
     try:
+
         with open(
             STATE_FILE,
             "r",
@@ -78,12 +81,6 @@ def save_state(files):
                 ensure_ascii=False,
                 indent=4
             )
-
-        print(
-            "СОХРАНИЛИ FILES:",
-            files,
-            flush=True
-        )
 
     except Exception as e:
 
@@ -146,17 +143,17 @@ def check_files():
 
     new_files = get_files_from_page()
 
-    changes = False
-
-    if set(old_files) != set(new_files):
-
-        changes = True
+    changed = (
+        set(old_files)
+        !=
+        set(new_files)
+    )
 
     save_state(
         new_files
     )
 
-    return changes
+    return changed
 
 def monitor():
 
@@ -170,8 +167,9 @@ def monitor():
     if changed:
 
         send_message(
-            "⚠️ На сайте ГИБДД изменился список файлов.\n\n"
-            "Проверить обновления:\n"
+            "🚨 Попался!\n\n"
+            "На сайте что-то изменилось.\n\n"
+            "Пора проверить:\n"
             f"{PAGE_URL}"
         )
 
@@ -179,5 +177,7 @@ def monitor():
 
         print(
             "Изменений нет",
+            flush=True
+        )
             flush=True
         )
