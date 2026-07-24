@@ -1,22 +1,16 @@
-# ==========================
-# bot.py
-# ==========================
-
 import time
 import traceback
-from datetime import datetime
 
-from check import monitor, send_message
 from config import CHECK_INTERVAL
+from check import monitor, send_message
 
 def main():
 
     send_message(
-        "🚀 Бот мониторинга файлов ГИБДД запущен.\n"
-        "✅ Система работает."
+        "🟢 На месте.\n\n"
+        "Начинаю наблюдение.\n"
+        "Если PDF зашевелятся, я сообщу."
     )
-
-    last_report = None
 
     while True:
 
@@ -24,28 +18,18 @@ def main():
 
             monitor()
 
-            now = datetime.now()
-
-            # ежедневный отчет примерно раз в сутки
-            if now.hour == 9 and last_report != now.date():
-
-                send_message(
-                    "✅ Все работает.\n\n"
-                    "Бот продолжает мониторинг файлов ГИБДД."
-                )
-
-                last_report = now.date()
-
         except Exception:
 
             error = traceback.format_exc()
 
             send_message(
-                "❌ Ошибка в работе системы:\n\n"
-                + error[:3000]
+                "❌ Что-то пошло не так.\n\n"
+                f"{error}"
             )
 
-        time.sleep(CHECK_INTERVAL)
+        time.sleep(
+            CHECK_INTERVAL
+        )
 
 if __name__ == "__main__":
     main()
