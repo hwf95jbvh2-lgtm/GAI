@@ -5,7 +5,7 @@ from config import CHECK_INTERVAL
 from check import monitor, send_message
 
 
-HEARTBEAT_INTERVAL = 60
+HEARTBEAT_INTERVAL = 60  # для проверки ставим 1 минуту
 
 
 def main():
@@ -16,7 +16,7 @@ def main():
         "Если PDF зашевелятся, я сообщу."
     )
 
-    last_heartbeat = 0
+    last_heartbeat = time.time()
 
     while True:
 
@@ -24,16 +24,14 @@ def main():
 
             monitor()
 
-            if time.time() - last.heartbeat >= HEARTBEAT_INTERVAL:
+            if time.time() - last_heartbeat >= HEARTBEAT_INTERVAL:
 
-            
                 send_message(
                     "💚 Всё спокойно.\n\n"
                     "Я на посту и продолжаю следить за файлами."
                 )
 
-                last_heartbeat = time_time ()
-
+                last_heartbeat = time.time()
 
         except Exception:
 
@@ -43,7 +41,6 @@ def main():
                 "❌ Что-то пошло не так.\n\n"
                 f"{error}"
             )
-
 
         time.sleep(CHECK_INTERVAL)
 
