@@ -20,6 +20,8 @@ from config import (
     STATE_FILE
 )
 
+BASE_URL = "https://xn--80aebkobnwfcnsfk1e0h.xn--p1ai"
+
 def send_message(text):
     try:
         requests.post(
@@ -28,13 +30,14 @@ def send_message(text):
                 "chat_id": CHAT_ID,
                 "text": text
             },
-            timeout=REQUEST_TIMEOUT
+            timeout=30
         )
 
     except Exception as e:
-        print("Ошибка Telegram:", e, flush=True)
+        print("Telegram error:", e, flush=True)
 
 def load_state():
+
     if not os.path.exists(STATE_FILE):
         return {}
 
@@ -50,6 +53,7 @@ def load_state():
         return {}
 
 def save_state(data):
+
     with open(
         STATE_FILE,
         "w",
@@ -63,44 +67,93 @@ def save_state(data):
         )
 
 def get_hash(content):
+
     return hashlib.sha256(content).hexdigest()
+
+def get_page():
+
+    last_error = None
+
+    for attempt in range(3):
+
+        try:
+
+            response = requests.get(
+                PAGE_URL,
+                headers=HEADERS,
+                timeout=REQUEST_TIMEOUT
+            )
+
+            response.raise_for_status()
+
+            return response.text
+
+        except Exception as e:
+
+            last_error = e
+
+            print(
+                f"Попытка {attempt + 1}/3 не удалась",
+                e,
+                flush=True
+            )
+
+            time.sleep(20)
+
+    raise last_error
 
 def get_files_from_page():
 
-    response = requests.get(
-        PAGE_URL,
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT
-    )
-
-    response.raise_for_status()
+    html = get_page()
 
     soup = BeautifulSoup(
-        response.text,
+        html,
         "html.parser"
     )
 
     files = {}
 
-    for link in soup.find_all("a"):
+    title = soup.find(
+        string=lambda x:
+        x and "Файлы для скачивания" in x
+    )
 
-        url = link.get("href")
+    if not title:
+        return files
 
-        if not url:
+    block = title.find_parent(
+        class_="b-service-bank"
+    )
+
+    if not block:
+        return files
+
+    for link in block.find_all("a"):
+
+        href = link.get("href")
+
+        if not href:
             continue
 
-        if ".pdf" not in url.lower():
+        if ".pdf" not in href.lower():
             continue
 
-        if url.startswith("/"):
-            url = (
-                "https://xn--80aebkobnwfcnsfk1e0h.xn--p1ai"
-                + url
-            )
+        if href.startswith("/"):
 
-        name = url.split("/")[-1]
+            url = BASE_URL + href
 
-        files[name] = url
+        else:
+
+            url = href
+
+        name = href.split("/")[-1]
+
+        description = link.text.strip()
+
+        files[name] = {
+            "url": url,
+            "description": description
+        }
 
     return files
 
@@ -126,16 +179,20 @@ def check_files():
 
     files = get_files_from_page()
 
-    for name, url in files.items():
+    for name, info in files.items():
 
-        content = download_file(url)
+        content = download_file(
+            info["url"]
+        )
 
-        file_hash = get_hash(content)
+        file_hash = get_hash(
+            content
+        )
 
         current_state[name] = {
-            "url": url,
-            "hash": file_hash,
-            "time": datetime.now().isoformat()
+            "url": info["url"],
+            "description": info["description"],
+            "hash": file_hash
         }
 
         if name not in old_state:
@@ -144,11 +201,20 @@ def check_files():
                 f"🆕 Новый файл:\n{name}"
             )
 
-        elif old_state[name]["hash"] != file_hash:
+        else:
 
-            changes.append(
-                f"📄 Изменен файл:\n{name}"
-            )
+            if old_state[name]["hash"] != file_hash:
+
+                changes.append(
+                    f"📄 Изменен файл:\n{name}"
+                )
+
+            if old_state[name].get("description") != info["description"]:
+
+                changes.append(
+                    f"📝 Изменено описание:\n{name}\n\n"
+                    f"Новое:\n{info['description']}"
+                )
 
     for old_name in old_state:
 
@@ -158,13 +224,14 @@ def check_files():
                 f"❌ Файл удален:\n{old_name}"
             )
 
-    save_state(current_state)
+    save_state(
+        current_state
+    )
 
     return changes
 
-def monitor():
-
-    print(
+def monitor()
+:print(
         "Проверка файлов...",
         flush=True
     )
@@ -173,13 +240,11 @@ def monitor():
 
     if changes:
 
-        message = (
+        send_message(
             "⚠️ Изменения на сайте:\n\n"
             +
             "\n\n".join(changes)
         )
-
-        send_message(message)
 
     else:
 
